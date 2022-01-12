@@ -67,12 +67,3 @@ if (tension_resistance>0.1) {
 }
 ```
 
-
-## HTML :
-
-```html
-<form oninput="x.value=parseInt(a.value)+parseInt(b.value)">
-  <input type="range" id="a" value="50">
-  +<input type="number" id="b" value="25">
-  =<output name="x" for="a b"></output>
-</form> 
