@@ -1,4 +1,4 @@
-# Arduino0:
+# Arduino :
 
 ```c
 // Declaration des variables
