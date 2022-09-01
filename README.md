@@ -1,7 +1,4 @@
-# Courbes_Python
-Codes sous Python pour tracer des courbes dans JupyterNotebook
-
-## Arduino0:
+# Arduino0:
 
 ```c
 // Declaration des variables
