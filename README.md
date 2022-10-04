@@ -64,3 +64,54 @@ if (tension_resistance>0.1) {
 }
 ```
 
+```cpp
+ #include <stdio.h>
+#include <stdlib.h>
+int main()
+{
+  /* Déclarations : Noms des fichiers et pointeurs de référence */
+  char ANCIEN[]  = "Fichier_Exo1.txt";
+  char NOUVEAU[] = "Fichier_Exo3.txt";
+  FILE *INFILE, *OUTFILE;
+  char NOM[30], PRENOM[30];
+  int NUMERO;
+
+  char NOM_NOUV[30], PRE_NOUV[30];
+  int NUM_NOUV;
+  /* Ouverture de l'ancien fichier en lecture */
+  INFILE = fopen(ANCIEN, "r");
+   if (!INFILE)
+     {
+      printf("\aERREUR: Impossible d'ouvrir le fichier: %s.\n", ANCIEN);
+      exit(-1);
+     }
+  /* Ouverture du nouveau fichier en écriture */
+  OUTFILE = fopen(NOUVEAU, "w");
+   if (!OUTFILE)
+     {
+      printf("\aERREUR: Impossible d'ouvrir le fichier: %s.\n", NOUVEAU);
+      exit(-1);
+     }
+
+  /* Saisie de l'enregistrement à ajouter */
+  printf("Enregistrement à ajouter : \n");
+  printf("Numéro : ");
+  scanf("%d",&NUM_NOUV);     
+  printf("Nom    : ");
+  scanf("%s",NOM_NOUV);
+  printf("Prénom : ");
+  scanf("%s",PRE_NOUV);
+  /* Copie des enregistrements de l'ancien fichier */
+  while (!feof(INFILE))
+    {
+     fscanf (INFILE, "%d\t%s\t%s\n", &NUMERO, NOM, PRENOM);
+     fprintf(OUTFILE, "%d\t%s\t%s\n", NUMERO, NOM, PRENOM);
+    }
+  /* Ecriture du nouvel enregistrement à la fin du fichier */
+  fprintf(OUTFILE,"%d\t%s\t%s\n",NUM_NOUV,NOM_NOUV,PRE_NOUV);
+  /* Fermeture des fichiers */
+  fclose(OUTFILE);
+  fclose(INFILE);
+   return 0;
+} 
+```
