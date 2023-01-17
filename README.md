@@ -58,7 +58,7 @@ if gps.satellites is not None:
        if gps.height_geoid is not None:
            print("Height geoid: {} meters".format(gps.height_geoid))
 
-
+```
 
 
 
