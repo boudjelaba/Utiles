@@ -90,3 +90,39 @@ https://www.youtube.com/watch?v=d-3aAMiynVI
 https://www.youtube.com/watch?v=7WXupDjZIzo
 ___
 
+
+
+## Serveur 
+
+```python
+import socket
+serveur = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+serveur.bind(('', 60000))  # Écoute sur le port 60000
+serveur.listen(5)
+while True:
+    client, infosClient = serveur.accept()
+    print("\t Client connecté. Adresse " + infosClient[0])
+    requete = client.recv(255)  # Reçoit 255 octets (à changer pour recevoir plus de données)
+    print(requete.decode("utf-8"))
+    reponse = "Bonjour, je suis le serveur \n"
+    client.send(reponse.encode("utf-8"))
+    print("\t Connexion fermée")
+    client.close()
+serveur.close()
+```
+
+## Client
+
+```python
+import socket
+adresseIP = "127.0.0.1" # Le poste local (local host)
+port = 60000 # Se connecter sur le port 60000
+client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client.connect((adresseIP, port))
+print("Client connecté au serveur \n")
+client.send("Bonjour, je suis le client \n".encode("utf-8"))
+reponse = client.recv(255)
+print(reponse.decode("utf-8"))
+print("Connexion fermée")
+client.close()
+```
