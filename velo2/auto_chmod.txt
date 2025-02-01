@@ -1,0 +1,153 @@
+Last login: Sun Apr 21 08:44:16 on console
+
+The default interactive shell is now zsh.
+To update your account to use zsh, please run `chsh -s /bin/zsh`.
+For more details, please visit https://support.apple.com/kb/HT208050.
+(base) MacBook-Pro-de-Kamal:img kamalboudjelaba$ cd ..
+(base) MacBook-Pro-de-Kamal:velo kamalboudjelaba$ ls
+admin-image.php	date.js		image_test.php	infos.php	meteoKB.css
+admin-info.php	edtCIEL.png	images		js		meteoKB.js
+config.php	image.jpg	images.php	logo2.pdf	uploaded.php
+css		image2.jpg	img		meteo.php	uploaded_img
+(base) MacBook-Pro-de-Kamal:velo kamalboudjelaba$ sudo chmod -R 777 img
+Password:
+(base) MacBook-Pro-de-Kamal:velo kamalboudjelaba$ 
+
+/***********************************************/
+
+Pour lister les utilisateurs et les hôtes
+(requête sql) :
+
+select user,host from mysql.user;
+
+
+Par exemple pour faire en sorte que l'utilisateur "neoflow" puisse se connecter depuis l'IP 192.168.1.58, on exécutera cette commande dans MySQL :
+
+CREATE USER "neoflow"@"192.168.1.58" IDENTIFIED BY "mot_de_passe";
+
+
+On peut également, pour ouvrir un peu plus de notre serveur aux connexions externes, l'ouvrir pas seulement à l'IP 192.168.1.58 mais à une plage d'IP (comme 192.168.1.0/24) ou à toutes les IP externes avec le signe "%" à la place de l'IP.
+
+On va maintenant donner les droits de lecture et de listage sur toutes nos bases de données SQL à l'utilisateur "neoflow" depuis l'IP "192.168.1.58". Les droits à mettre en place dépendent ici de votre situation.
+
+GRANT SELECT, SHOW DATABASES ON *.* TO "neoflow"@"192.168.1.58";
+
+On finira par faire relire à MySQL sa table de privilège pour qu'il mette à jours les droits et les utilisateurs :
+
+FLUSH PRIVILEGES;
+
+Nous allons maintenant refaire notre commande qui liste nos utilisateurs et nos hôtes pour voir la différence :
+
+select user,host from mysql.user;
+
+
+Depuis notre client, on exécute donc cette commande pour nous connecter à distance sur notre serveur. Ici, il a l'IP 192.168.1.46/24 :
+
+mysql -u neoflow -p -h 192.168.1.46
+
+Lien doc : https://www.it-connect.fr/configurer-le-ssl-pour-securiser-mysql%EF%BB%BF/
+
+
+Vérifier le support SSL de MySQL
+
+Nous allons commencer par voir si notre mysql-server supporte le SSL ou non. On se rend donc en ligne de commande sur notre serveur puis nous exécutons la commande suivante :
+
+show variables LIKE "%ssl%";
+
+
+
+
+Configuration serveur et génération des certificats
+
+Pour fonctionner, le SSL sur MySQL a besoin de certificats. On va donc s'occuper de les générer. On commence par créer un répertoire dans lequel nous allons stocker nos certificats :
+
+mkdir /etc/mysql/newcerts/
+cd /etc/mysql/newcerts/
+
+On commence par ceux de notre autorité de certification :
+
+openssl genrsa 2048 > ca-key.pem
+openssl req -new -x509 -nodes -days 1000 -key ca-key.pem > ca-cert.pem
+
+On génère ensuite le certificat de notre serveur :
+
+openssl req -newkey rsa:2048 -days 1000 -nodes -keyout server-key.pem > server-req.pem
+openssl x509 -req -in server-req.pem -days 1000 -CA ca-cert.pem -CAkey ca-key.pem -set_serial 01 > server-cert.pem
+
+Et enfin celui de nos clients, c'est celui la que nous transfèrerons sur nos clients pour qu'ils puissent se connecter à notre serveur :
+
+openssl req -newkey rsa:2048 -days 1000 -nodes -keyout client-key.pem > client-req.pem
+openssl x509 -req -in client-req.pem -days 1000 -CA ca-cert.pem -CAkey ca-key.pem -set_serial 01 > client-cert.pem
+
+Nous allons maintenant aller modifier la configuration de notre serveur afin de lui indiquer les certificats à utiliser et donc de lui permettre d'utiliser le SSL. On va donc modifier le fichier "/etc/mysql/my.cnf" pour y ajouter dans la section "[mysqld]" les lignes suivantes :
+
+ssl-ca=/etc/mysql/newcerts/ca-cert.pem
+ssl-cert=/etc/mysql/newcerts/server-cert.pem
+ssl-key=/etc/mysql/newcerts/server-key.pem
+
+On va ensuite redémarrer notre serveur MySQL pour qu'il prenne en compte nos modifications de paramétrage :
+
+service mysql restart
+
+On va maintenant se reconnecter (en local) en ligne de commande et effectuer à nouveau nos vérifications pour voir si le SSL est bien utilisé et supporté :
+
+show variables LIKE "%ssl%";
+
+
+
+select user,host,ssl_type from mysql.user;
+
+On voit donc que par défaut, le champ "ssl_type" est vide pour tous les utilisateurs ce qui veux dire qu'aucun d'entre eux n'est obligé ou ne peut utiliser le SSL pour les échanges MySQL avec le serveur. On va donc obliger notre utilisateur "neoflow" à utiliser le SSL en ajoutant "REQUIRE SSL" lors de la création de l'utilisateur :
+
+CREATE USER "neoflow"@"192.168.1.58" IDENTIFIED BY "motdepasse" REQUIRE SSL;
+
+On pourra ensuite revérifier la valeur de "ssl_type" pour notre utilisateur en utilisant la même commande que précédemment :
+
+select user,host,ssl_type from mysql.user;
+
+
+
+
+
+On voit donc que notre utilisateur peut utiliser toutes les formes de chiffrement SSL à présent. Nous allons aussi transférer les trois fichiers dans le client a besoin pour établir une connexion SSL. Il s'agit des fichier "ca-cert.pem", "client-cert.pem" ainsi que "client-key.pem" que l'on pourra transférer du client au serveur par SCP par exemple: voir ce tutoriel sur le transfert de fichier avec SCP
+
+Nous pourrons par exemple mettre ces fichiers dans le répertoire "/etc/mysql/" du client. Une fois cela fait, on ira modifier la configuration du client dans le fichier "/etc/mysql/my.cnf" pour y ajouter ces trois lignes dans la section "[client]":
+
+ssl-ca=/etc/mysql/ca-cert.pem
+ssl-cert=/etc/mysql/client-cert.pem
+ssl-key=/etc/mysql/client-key.pem
+
+Il faudra alors redémarrer le mysql client pour que la nouvelle configuration mysql soit pris en compte :
+
+service mysql restart
+
+
+
+Test de connexion à distance avec SSL
+
+Nous allons maintenant faire un test de connexion à distance. On utilisera pour cela l'utilisateur nouvellement créé "neoflow" depuis un client ayant l'IP 192.168.1.58 ainsi que le logiciel "Wireshark" nous permettra d'analyser les échanges réseau entre le serveur et le client.
+
+Note : Si vous faites ce tutoriel, il n'est pas nécessaire d'installer Wireshark, je le fait ici pour vous montrer que le traffic passe en clair sur le réseau mais ce n'est pas utile pour configurer SSL sur MySQL.
+
+Depuis notre client, on exécute donc cette commande pour nous connecter à distance sur notre serveur (ici, il a l'IP 192.168.1.46/24 :
+
+mysql -u neoflow -p -h 192.168.1.46
+
+On pourra ensuite lister nos bases de données à distance avec la commande "show databases;" :
+
+
+
+
+
+
+Avoir le choix entre une connexion SSL ou non chiffrée
+
+Quand on met dans la configuration les certificats à utiliser pour une connexion, cela peut poser problème si le client est amené à établir des connexions avec plusieurs serveurs (avec ou sans SSL). On va donc vouloir avoir la possibilité de choisir les certificats à utiliser pour l'établissement d'une connexion mais également de pouvoir établir une connexion sans SSL.
+
+On va donc retirer dans ce cas les certificats de notre configuration MySQL client et les spécifier dans la ligne de commande à passer lors de la connexion. En utilisant les mêmes certificats, on utilisera la commande suivante :
+
+mysql -u neoflow -p -h 1492.168.1.46 --ssl-ca=/etc/mysql/ca-cert.pem --ssl-cert/etc/mysql/client-cert.pem --ssl-key/etc/mysql/client-key.pem
+
+Ici, on pourra donc spécifier quel certificat utiliser pour établir une connexion SSL avec tel ou tel serveur mais également ne rien préciser du tout si le serveur auquel on veut avoir accès ne demande ou ne permet pas les connexions SSL.
+
+
